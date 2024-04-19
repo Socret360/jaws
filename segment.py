@@ -3,7 +3,8 @@ import argparse
 from utils import preprocess_phylypo_sample
 from networks import JAWSModel
 
-parser = argparse.ArgumentParser(description='Run the training loop.')
+parser = argparse.ArgumentParser(
+    description='Run the segmentation on one sample text file.')
 parser.add_argument('config', type=str, help='Path to config file.')
 parser.add_argument('model_path', type=str, help='Path to model weight file.')
 parser.add_argument('sample', type=str,
