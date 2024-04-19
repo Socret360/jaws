@@ -1,0 +1,5 @@
+-f https://data.pyg.org/whl/torch-2.2.0+cpu.html
+torch
+kornia
+torchmetrics
+torch_geometric
