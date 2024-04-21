@@ -107,3 +107,17 @@ Below is the results on the test sets from the set repository.
 | ------- | -------- | --------------- |
 | JAWSGCN | 97.433% | 7.651% |
 | JAWSGAT | 98.236% | 5.221% |
+
+# Future Improvements
+
+- [ ] Handling of non-Khmer Characters
+
+  The current version of JAWS strip away characters that are not in the VOCAB list. An improvement to the usability of the model would be to take into account non-Khmer characters that are in the input text. One way to do this, I believe, is to include an addition element in the character vector to represent the unknown characters that are not in the VOCAB list.
+
+- [ ] Determining Prefix, Suffix, Compound, Spaces, and Non-Space
+
+  The current implementation runs a binary node classification. A more useful extension would be to modify the task to a multi-class classification where the model classify if two characters are a prefix, a suffix, a compound, a space, or no space at all.
+
+- [ ] Khmer Character Cluster (KCC) Violation Penalty
+
+  The current model sometimes outputs separators that cause words to break their correct spelling. I believe, there are two ways to handle this. One, additional element can be added to the input node vector to signify if it is part of a character clusters or not. This will ensure that nodes that are made up of characters that formed a KCC never get separated. Another way, is to add an another loss term to the current loss function that penalize predictions that violates the KCC convention.
