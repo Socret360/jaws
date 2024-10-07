@@ -13,7 +13,7 @@ from torchmetrics.classification import BinaryF1Score
 from kornia.losses import binary_focal_loss_with_logits
 from torchmetrics.text import CharErrorRate, WordErrorRate
 #
-from utils import pretty_training_log, text_to_graph, post_process, read_config_file, VOCAB
+from utils import pretty_training_log, text_to_graph, post_process, read_config_file, FEATURE_VECTOR_LENGTH
 
 
 class JAWSNetwork(torch.nn.Module):
@@ -54,7 +54,7 @@ class JAWSModel:
         config = read_config_file(config_file)
         self.model = JAWSNetwork(
             type=config["type"],
-            num_features=len(VOCAB)*2,
+            num_features=FEATURE_VECTOR_LENGTH*2,
             hidden_dims=config["hidden_dims"],
         )
 

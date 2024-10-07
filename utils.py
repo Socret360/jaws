@@ -18,9 +18,9 @@ SYMS = list(set('៕។៛ៗ៚៙៘,.? '))
 NUMBERS = list(set(u'០១២៣៤៥៦៧៨៩0123456789'))
 LUNAR = list(set('᧠᧡᧢᧣᧤᧥᧦᧧᧨᧩᧪᧫᧬᧭᧮᧯᧰᧱᧲᧳᧴᧵᧶᧷᧸᧹᧺᧻᧼᧽᧾᧿'))
 VOCAB = sorted(CONSTS + VOWELS + SUB + DIAC + NUMBERS + SYMS + LUNAR)
+FEATURE_VECTOR_LENGTH = len(VOCAB)+1 # including unk characters
 
 CHAR_TO_INT = {v: i for i, v in enumerate(VOCAB)}
-INT_TO_CHAR = {i: v for i, v in enumerate(VOCAB)}
 
 LABEL_MAP = [NON_SPACE_SEP, SPACE_SEP]
 
@@ -64,7 +64,8 @@ def preprocess_phylypo_sample(text: str) -> str:
     text = text.strip()
     text = text.replace('️', '\u200b')
     text = text.replace('\n', '\u0020')
-    text = "".join([c for c in list(text) if c in VOCAB or c == " "])
+    # text = "".join(list(text))
+    # text = "".join([c if c in VOCAB or c == " " else '~' for c in list(text)])
     text = re.sub('\u0020+', '\u0020', text)
     preprocesed = NON_SPACE_SEP.join(list(text))
     preprocesed = preprocesed.replace(
@@ -91,15 +92,15 @@ def text_to_graph(text: str, original: str = None):
     characters = re.split(delimeter, text)
     separators = re.findall(delimeter, text)
 
-    features = np.array([CHAR_TO_INT[characters[i]]
-                         for i in range(0, len(characters))])
+    features = np.array([CHAR_TO_INT[char] if char in VOCAB else len(VOCAB)
+                         for char in characters])
 
     labels = np.array([LABEL_MAP.index(sep) for sep in separators])
 
-    x = np.zeros((len(characters), len(VOCAB)))
+    x = np.zeros((len(characters), FEATURE_VECTOR_LENGTH))
     x[np.arange(0, len(characters)), features] = 1
     x = np.repeat(x, 2, axis=0)[1:-1]
-    x = x.flatten().reshape((len(separators), len(VOCAB)*2))
+    x = x.flatten().reshape((len(separators), FEATURE_VECTOR_LENGTH*2))
 
     y = np.zeros((len(separators), len(LABEL_MAP)))
     y[np.arange(0, len(separators)), labels] = 1
