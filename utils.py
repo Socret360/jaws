@@ -18,9 +18,12 @@ SYMS = list(set('៕។៛ៗ៚៙៘,.? '))
 NUMBERS = list(set(u'០១២៣៤៥៦៧៨៩0123456789'))
 LUNAR = list(set('᧠᧡᧢᧣᧤᧥᧦᧧᧨᧩᧪᧫᧬᧭᧮᧯᧰᧱᧲᧳᧴᧵᧶᧷᧸᧹᧺᧻᧼᧽᧾᧿'))
 VOCAB = sorted(CONSTS + VOWELS + SUB + DIAC + NUMBERS + SYMS + LUNAR)
-FEATURE_VECTOR_LENGTH = len(VOCAB)+1 # including unk characters
+REGEX_MATCHES_ALL_IGNORE_SPACES = f"([^ {''.join(re.escape(char) for char in VOCAB)}]+)(\u0020)|(\u0020)([^ {''.join(re.escape(char) for char in VOCAB)}]+)"
+# including unk characters
+FEATURE_VECTOR_LENGTH = len(VOCAB)+2
 
 CHAR_TO_INT = {v: i for i, v in enumerate(VOCAB)}
+CHAR_TO_INT["[SP]"] = len(VOCAB)
 
 LABEL_MAP = [NON_SPACE_SEP, SPACE_SEP]
 
@@ -64,13 +67,23 @@ def preprocess_phylypo_sample(text: str) -> str:
     text = text.strip()
     text = text.replace('️', '\u200b')
     text = text.replace('\n', '\u0020')
-    # text = "".join(list(text))
-    # text = "".join([c if c in VOCAB or c == " " else '~' for c in list(text)])
     text = re.sub('\u0020+', '\u0020', text)
-    preprocesed = NON_SPACE_SEP.join(list(text))
-    preprocesed = preprocesed.replace(
-        f"{NON_SPACE_SEP}\u0020{NON_SPACE_SEP}", SPACE_SEP)
-    return preprocesed, text
+    text = re.sub(
+        rf"([^{re.escape(''.join(VOCAB))}])\u0020",
+        lambda match: f"{match.group(1)}[SP]",
+        text
+    )
+    text = re.sub(
+        rf"\u0020([^{re.escape(''.join(VOCAB))}])",
+        lambda match: f"[SP]{match.group(1)}",
+        text
+    )
+    preprocessed = NON_SPACE_SEP.join(re.findall(r'\[SP\]|.', text))
+    preprocessed = preprocessed.replace(
+        f"{NON_SPACE_SEP}\u0020{NON_SPACE_SEP}",
+        SPACE_SEP
+    )
+    return preprocessed, text
 
 
 def text_to_graph(text: str, original: str = None):
@@ -92,7 +105,7 @@ def text_to_graph(text: str, original: str = None):
     characters = re.split(delimeter, text)
     separators = re.findall(delimeter, text)
 
-    features = np.array([CHAR_TO_INT[char] if char in VOCAB else len(VOCAB)
+    features = np.array([CHAR_TO_INT[char] if char in CHAR_TO_INT.keys() else FEATURE_VECTOR_LENGTH-1
                          for char in characters])
 
     labels = np.array([LABEL_MAP.index(sep) for sep in separators])
