@@ -83,7 +83,7 @@ def preprocess_phylypo_sample(text: str) -> str:
         f"{NON_SPACE_SEP}\u0020{NON_SPACE_SEP}",
         SPACE_SEP
     )
-    return preprocessed, text
+    return preprocessed, text.replace("[SP]", "\u0020")
 
 
 def text_to_graph(text: str, original: str = None):
@@ -107,6 +107,10 @@ def text_to_graph(text: str, original: str = None):
 
     features = np.array([CHAR_TO_INT[char] if char in CHAR_TO_INT.keys() else FEATURE_VECTOR_LENGTH-1
                          for char in characters])
+
+    characters = "".join(characters)
+    characters = characters.replace("[SP]", '\u0020')
+    characters = list(characters)
 
     labels = np.array([LABEL_MAP.index(sep) for sep in separators])
 
