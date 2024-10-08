@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import torch
 import tempfile
@@ -184,6 +185,7 @@ class JAWSModel:
         o = self.model(data)
         y_pred = o.argmax(dim=1).numpy()
         out = post_process(y_pred, data.characters)
+        out = re.sub('\u0020+', '\u0020', out)
         return out
 
     def predict_sample(self, sample: Data) -> torch.Tensor:
