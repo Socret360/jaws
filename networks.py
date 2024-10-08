@@ -52,11 +52,13 @@ class JAWSNetwork(torch.nn.Module):
 class JAWSModel:
     def __init__(self, config_file: str) -> None:
         config = read_config_file(config_file)
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu")
         self.model = JAWSNetwork(
             type=config["type"],
             num_features=FEATURE_VECTOR_LENGTH*2,
             hidden_dims=config["hidden_dims"],
-        )
+        ).to(self.device)
 
     def fit(
             self,
@@ -76,8 +78,8 @@ class JAWSModel:
             tempfile.gettempdir() if model_temp_dir is None else model_temp_dir,
             "best_weights.pt"
         )
-        self.f1_score = BinaryF1Score()
-        self.wer = WordErrorRate()
+        self.f1_score = BinaryF1Score().to(self.device)
+        self.wer = WordErrorRate().to(self.device)
 
         self.optimizer = torch.optim.Adam(
             self.model.parameters(),
@@ -192,6 +194,7 @@ class JAWSModel:
         total_loss, total_f1, total_wer, n = 0, 0, 0, 0
 
         for data in tqdm(dataloader):
+            data = data.to(self.device)
             if use_grad:
                 self.optimizer.zero_grad()
 
@@ -226,7 +229,7 @@ class JAWSModel:
         out = []
         for i in range(len(characters)):
             text = post_process(
-                y_preds[batch == i],
+                y_preds[batch == i].cpu(),
                 characters[i]
             )
             out.append(text)
