@@ -78,6 +78,17 @@ def preprocess_phylypo_sample(text: str) -> str:
         lambda match: f"[SP]{match.group(1)}",
         text
     )
+    text = re.sub(
+        rf"([{re.escape(''.join(VOCAB))}])([^{re.escape(''.join(VOCAB))}])",
+        lambda match: f"{match.group(1)}[SP]{match.group(2)}",
+        text
+    )
+    text = re.sub(
+        rf"([^{re.escape(''.join(VOCAB))}])([{re.escape(''.join(VOCAB))}])",
+        lambda match: f"{match.group(1)}[SP]{match.group(2)}",
+        text
+    )
+    text = re.sub(r'(\[SP\])+', "[SP]", text)
     preprocessed = NON_SPACE_SEP.join(re.findall(r'\[SP\]|.', text))
     preprocessed = preprocessed.replace(
         f"{NON_SPACE_SEP}\u0020{NON_SPACE_SEP}",
