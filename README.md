@@ -31,17 +31,19 @@ Output: ខ្ញុំ កំពុង នៅ ជាមួយ ខាង CMG CCT
 You can perform word segmentation using the pretrained model by running the below command.
 
 ```bash
-usage: segment.py [-h] config model_path sample
+usage: segment.py [-h] [--file_mode] [--console_output] config model_path sample
 
 Run the segmentation on one sample text file.
 
 positional arguments:
-  config      Path to config file.
-  model_path  Path to model weight file.
-  sample      Path to the input text file containing the text to segment.
+  config            Path to config file.
+  model_path        Path to model weight file.
+  sample            Path to the input text file containing the text to segment.
 
 optional arguments:
-  -h, --help  show this help message and exit
+  -h, --help        show this help message and exit
+  --file_mode       Wether sample is a file
+  --console_output  Whether to output the result to console
 ```
 
 ### Training
