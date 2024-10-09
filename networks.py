@@ -68,12 +68,13 @@ class JAWSModel:
             batch_size=32,
             learning_rate=0.01,
             mode: str = "min",
-            monitor: str = "loss",
-            early_stopping_patience: int = 10,
-            restore_best_weights: int = True,
-            logging_interval: int = 1,
             epochs: int = None,
+            monitor: str = "loss",
+            logging_interval: int = 1,
             model_temp_dir: str = None,
+            restore_best_weights: int = True,
+            early_stopping_patience: int = 10,
+            pretrained_weights_path=None,
     ):
         self.temp_weights_path = os.path.join(
             tempfile.gettempdir() if model_temp_dir is None else model_temp_dir,
@@ -98,6 +99,12 @@ class JAWSModel:
             )
 
         self.best_epoch, best_metric, epoch = 0, None, 0
+
+        if pretrained_weights_path is not None:
+            print(
+                f"Loading pretrained weights from: {pretrained_weights_path}")
+            self.model.load_state_dict(torch.load(
+                pretrained_weights_path, map_location=self.device))
 
         while True:
 
