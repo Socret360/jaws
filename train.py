@@ -25,6 +25,11 @@ parser.add_argument('--early_stopping_patience', type=int,
 parser.add_argument('--epochs', type=int,
                     help='The number of epochs to train',
                     default=None)
+parser.add_argument('--batch_size', type=int,
+                    help='The number of samples per batch',
+                    default=32)
+parser.add_argument('--pretrained_weights', type=str,
+                    help='The path to the pretrained weights')
 args = parser.parse_args()
 
 
@@ -40,7 +45,9 @@ model.fit(
     data=dataset,
     epochs=args.epochs,
     learning_rate=args.lr,
+    batch_size=args.batch_size,
     model_temp_dir=args.output_dir,
+    pretrained_weights_path=args.pretrained_weights,
     early_stopping_patience=args.early_stopping_patience,
 )
 

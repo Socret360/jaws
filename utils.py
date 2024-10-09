@@ -18,9 +18,12 @@ SYMS = list(set('៕។៛ៗ៚៙៘,.? '))
 NUMBERS = list(set(u'០១២៣៤៥៦៧៨៩0123456789'))
 LUNAR = list(set('᧠᧡᧢᧣᧤᧥᧦᧧᧨᧩᧪᧫᧬᧭᧮᧯᧰᧱᧲᧳᧴᧵᧶᧷᧸᧹᧺᧻᧼᧽᧾᧿'))
 VOCAB = sorted(CONSTS + VOWELS + SUB + DIAC + NUMBERS + SYMS + LUNAR)
+REGEX_MATCHES_ALL_IGNORE_SPACES = f"([^ {''.join(re.escape(char) for char in VOCAB)}]+)(\u0020)|(\u0020)([^ {''.join(re.escape(char) for char in VOCAB)}]+)"
+# including unk characters
+FEATURE_VECTOR_LENGTH = len(VOCAB)+2
 
 CHAR_TO_INT = {v: i for i, v in enumerate(VOCAB)}
-INT_TO_CHAR = {i: v for i, v in enumerate(VOCAB)}
+CHAR_TO_INT["[SP]"] = len(VOCAB)
 
 LABEL_MAP = [NON_SPACE_SEP, SPACE_SEP]
 
@@ -64,12 +67,34 @@ def preprocess_phylypo_sample(text: str) -> str:
     text = text.strip()
     text = text.replace('️', '\u200b')
     text = text.replace('\n', '\u0020')
-    text = "".join([c for c in list(text) if c in VOCAB or c == " "])
     text = re.sub('\u0020+', '\u0020', text)
-    preprocesed = NON_SPACE_SEP.join(list(text))
-    preprocesed = preprocesed.replace(
-        f"{NON_SPACE_SEP}\u0020{NON_SPACE_SEP}", SPACE_SEP)
-    return preprocesed, text
+    text = re.sub(
+        rf"([^{re.escape(''.join(VOCAB))}])\u0020",
+        lambda match: f"{match.group(1)}[SP]",
+        text
+    )
+    text = re.sub(
+        rf"\u0020([^{re.escape(''.join(VOCAB))}])",
+        lambda match: f"[SP]{match.group(1)}",
+        text
+    )
+    text = re.sub(
+        rf"([{re.escape(''.join(VOCAB))}])([^{re.escape(''.join(VOCAB))}])",
+        lambda match: f"{match.group(1)}[SP]{match.group(2)}",
+        text
+    )
+    text = re.sub(
+        rf"([^{re.escape(''.join(VOCAB))}])([{re.escape(''.join(VOCAB))}])",
+        lambda match: f"{match.group(1)}[SP]{match.group(2)}",
+        text
+    )
+    text = re.sub(r'(\[SP\])+', "[SP]", text)
+    preprocessed = NON_SPACE_SEP.join(re.findall(r'\[SP\]|.', text))
+    preprocessed = preprocessed.replace(
+        f"{NON_SPACE_SEP}\u0020{NON_SPACE_SEP}",
+        SPACE_SEP
+    )
+    return preprocessed, text.replace("[SP]", "\u0020")
 
 
 def text_to_graph(text: str, original: str = None):
@@ -91,15 +116,19 @@ def text_to_graph(text: str, original: str = None):
     characters = re.split(delimeter, text)
     separators = re.findall(delimeter, text)
 
-    features = np.array([CHAR_TO_INT[characters[i]]
-                         for i in range(0, len(characters))])
+    features = np.array([CHAR_TO_INT[char] if char in CHAR_TO_INT.keys() else FEATURE_VECTOR_LENGTH-1
+                         for char in characters])
+
+    characters = "".join(characters)
+    characters = characters.replace("[SP]", '\u0020')
+    characters = list(characters)
 
     labels = np.array([LABEL_MAP.index(sep) for sep in separators])
 
-    x = np.zeros((len(characters), len(VOCAB)))
+    x = np.zeros((len(characters), FEATURE_VECTOR_LENGTH))
     x[np.arange(0, len(characters)), features] = 1
     x = np.repeat(x, 2, axis=0)[1:-1]
-    x = x.flatten().reshape((len(separators), len(VOCAB)*2))
+    x = x.flatten().reshape((len(separators), FEATURE_VECTOR_LENGTH*2))
 
     y = np.zeros((len(separators), len(LABEL_MAP)))
     y[np.arange(0, len(separators)), labels] = 1

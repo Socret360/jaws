@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import torch
 import tempfile
@@ -7,13 +8,13 @@ from typing import List, Dict
 from torch.nn import ModuleList
 import torch.nn.functional as F
 from torch_geometric.data import Data
+from torchmetrics.text import WordErrorRate
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import GATConv, GCNConv
 from torchmetrics.classification import BinaryF1Score
 from kornia.losses import binary_focal_loss_with_logits
-from torchmetrics.text import CharErrorRate, WordErrorRate
 #
-from utils import pretty_training_log, text_to_graph, post_process, read_config_file, VOCAB
+from utils import pretty_training_log, text_to_graph, post_process, read_config_file, FEATURE_VECTOR_LENGTH
 
 
 class JAWSNetwork(torch.nn.Module):
@@ -52,11 +53,13 @@ class JAWSNetwork(torch.nn.Module):
 class JAWSModel:
     def __init__(self, config_file: str) -> None:
         config = read_config_file(config_file)
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu")
         self.model = JAWSNetwork(
             type=config["type"],
-            num_features=len(VOCAB)*2,
+            num_features=FEATURE_VECTOR_LENGTH*2,
             hidden_dims=config["hidden_dims"],
-        )
+        ).to(self.device)
 
     def fit(
             self,
@@ -65,19 +68,20 @@ class JAWSModel:
             batch_size=32,
             learning_rate=0.01,
             mode: str = "min",
-            monitor: str = "loss",
-            early_stopping_patience: int = 10,
-            restore_best_weights: int = True,
-            logging_interval: int = 1,
             epochs: int = None,
+            monitor: str = "loss",
+            logging_interval: int = 1,
             model_temp_dir: str = None,
+            restore_best_weights: int = True,
+            early_stopping_patience: int = 10,
+            pretrained_weights_path=None,
     ):
         self.temp_weights_path = os.path.join(
             tempfile.gettempdir() if model_temp_dir is None else model_temp_dir,
             "best_weights.pt"
         )
-        self.f1_score = BinaryF1Score()
-        self.wer = WordErrorRate()
+        self.f1_score = BinaryF1Score().to(self.device)
+        self.wer = WordErrorRate().to(self.device)
 
         self.optimizer = torch.optim.Adam(
             self.model.parameters(),
@@ -95,6 +99,12 @@ class JAWSModel:
             )
 
         self.best_epoch, best_metric, epoch = 0, None, 0
+
+        if pretrained_weights_path is not None:
+            print(
+                f"Loading pretrained weights from: {pretrained_weights_path}")
+            self.model.load_state_dict(torch.load(
+                pretrained_weights_path, map_location=self.device))
 
         while True:
 
@@ -182,6 +192,7 @@ class JAWSModel:
         o = self.model(data)
         y_pred = o.argmax(dim=1).numpy()
         out = post_process(y_pred, data.characters)
+        out = re.sub('\u0020+', '\u0020', out)
         return out
 
     def predict_sample(self, sample: Data) -> torch.Tensor:
@@ -192,6 +203,7 @@ class JAWSModel:
         total_loss, total_f1, total_wer, n = 0, 0, 0, 0
 
         for data in tqdm(dataloader):
+            data = data.to(self.device)
             if use_grad:
                 self.optimizer.zero_grad()
 
@@ -226,7 +238,7 @@ class JAWSModel:
         out = []
         for i in range(len(characters)):
             text = post_process(
-                y_preds[batch == i],
+                y_preds[batch == i].cpu(),
                 characters[i]
             )
             out.append(text)
