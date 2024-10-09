@@ -8,11 +8,11 @@ from typing import List, Dict
 from torch.nn import ModuleList
 import torch.nn.functional as F
 from torch_geometric.data import Data
+from torchmetrics.text import WordErrorRate
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import GATConv, GCNConv
 from torchmetrics.classification import BinaryF1Score
 from kornia.losses import binary_focal_loss_with_logits
-from torchmetrics.text import CharErrorRate, WordErrorRate
 #
 from utils import pretty_training_log, text_to_graph, post_process, read_config_file, FEATURE_VECTOR_LENGTH
 
